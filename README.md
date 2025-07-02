@@ -11,21 +11,22 @@ The system collects data from various IoT sensors placed in different areas of t
 - **Zipkin**
 - **Docker**
 - **Resilience4j and DLQ** (error handling)
+- **CQRS Pattern** (separation of commands and queries)
 
 **Main Components**
 
-| Service Name            | Description                                     |
-|-------------------------|-------------------------------------------------|
-| sensor-data-producer    | Produces raw sensor data to Kafka              |
-| data-ingestion          | Consumes Kafka data and stores it in MongoDB   |
-| data-processing         | Processes data for air quality analysis        |
-| air-event-service       | Generates events and alerts                    |
-| dashboard               | Expose REST API to display collected data      |
-| api-gateway             | Gateway with rate limiting and circuit breaker |
-| config-server           | Centralized configuration server               |
-| service-registry        | Eureka service discovery                       |
-| zipkin                  | Distributed tracing server                     |
-| redis                   | Used for rate limiting                         |
-| mongo + mongo-express   | NoSQL database + web UI                        |
-| mysql + adminer         | Relational DB + admin UI                       |
+| Service Name            | Description                                                      |
+|-------------------------|------------------------------------------------------------------|
+| sensor-data-producer    | Produces raw sensor data to Kafka                                |
+| data-ingestion          | Consumes Kafka data and stores it in MongoDB                     |
+| data-processing         | Processes data for air quality analysis                          |
+| air-event-service       | Generates events and alerts                                      |  
+| dashboard               | Expose REST API to display collected data (CQRS query model)     |
+| api-gateway             | Gateway with rate limiting and circuit breaker                   |
+| config-server           | Centralized configuration server                                 |
+| service-registry        | Eureka service discovery                                         |
+| zipkin                  | Distributed tracing server                                       |
+| redis                   | Used for rate limiting                                           |
+| mongo + mongo-express   | NoSQL database + web UI                                          |
+| mysql + adminer         | Relational DB + admin UI                                         |
 
