@@ -1,0 +1,245 @@
+version: "2.4"
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports:
+      - "2181:2181"
+    networks:
+      - platform-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - platform-net
+
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - platform-net
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - platform-net
+
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+#      - ME_CONFIG_MONGODB_SERVER=mongo
+#      - ME_CONFIG_BASICAUTH_USERNAME=admin
+#      - ME_CONFIG_BASICAUTH_PASSWORD=admin
+      - ME_CONFIG_MONGODB_SERVER=${ME_CONFIG_MONGODB_SERVER}
+      - ME_CONFIG_BASICAUTH_USERNAME=${ME_CONFIG_BASICAUTH_USERNAME}
+      - ME_CONFIG_BASICAUTH_PASSWORD=${ME_CONFIG_BASICAUTH_PASSWORD}
+    depends_on:
+      mongo:
+        condition: service_started
+    networks:
+      - platform-net
+
+  redis:
+    image: redis:7
+    container_name: redis
+    restart: always
+    volumes:
+      - redis_volume_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - platform-net
+
+  config-server:
+    build:
+      context: ./config-server
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://config-server:8888/actuator/health" ]
+      interval: 10s
+      retries: 10
+    restart: always
+    networks:
+      - platform-net
+
+  service-registry:
+    build:
+      context: ./service-registry
+    container_name: service-registry
+    ports:
+      - "8761:8761"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://service-registry:8761/actuator/health" ]
+      interval: 10s
+      retries: 10
+    restart: always
+    networks:
+      - platform-net
+
+  sensor-data-producer:
+    build:
+      context: ./sensor-data-producer
+    container_name: sensor-data-producer
+    depends_on:
+      config-server:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    ports:
+      - "8082:8081"
+    networks:
+      - platform-net
+
+  data-ingestion:
+    build:
+      context: ./data-ingestion
+    container_name: data-ingestion
+    depends_on:
+      config-server:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      mongo:
+        condition: service_started
+    ports:
+      - "8083:8083"
+    networks:
+      - platform-net
+
+  data-processing:
+    build:
+      context: ./data-processing
+    container_name: data-processing
+    depends_on:
+      config-server:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    ports:
+      - "8084:8084"
+    networks:
+      - platform-net
+
+  mysqldb:
+    image: mysql:8
+    container_name: mysql
+    restart: always
+    environment:
+#      MYSQL_ROOT_PASSWORD: root
+#      MYSQL_DATABASE: air_quality_events
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - platform-net
+
+  adminer:
+    image: adminer
+    container_name: adminer
+    restart: always
+    ports:
+      - "8086:8080"
+    networks:
+      - platform-net
+
+  air-event-service:
+    build:
+      context: ./air-event-service
+    container_name: air-event-service
+    depends_on:
+      config-server:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      mysqldb:
+        condition: service_started
+    ports:
+      - "8085:8085"
+    networks:
+      - platform-net
+
+  dashboard:
+    build:
+      context: ./dashboard
+    container_name: dashboard
+    depends_on:
+      config-server:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      mongo:
+        condition: service_started
+      zipkin:
+        condition: service_started
+    ports:
+      - "8087:8087"
+    networks:
+      - platform-net
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+    container_name: api-gateway
+    restart: always
+    depends_on:
+      config-server:
+        condition: service_healthy
+      service-registry:
+        condition: service_healthy
+      dashboard:
+        condition: service_started
+      redis:
+        condition: service_started
+      zipkin:
+          condition: service_started
+    ports:
+      - "8088:8088"
+    networks:
+      - platform-net
+
+networks:
+  platform-net:
+    driver: bridge
+
+volumes:
+  mongo_data:
+  mysql-data:
+  redis_volume_data:
