@@ -1,1 +1,2 @@
-# air-quality-monitoring-platform
+This project is a distributed microservices platform for air quality monitoring. The system collects data from various IoT sensors placed in different areas of the city, analyzes air quality, detects unusual events (such as increased pollution) and provides a dashboard for authorities to monitor the situation, conduct in-depth analyses and take timely actions to mitigate risks and ensure public safety.
+
