@@ -50,9 +50,6 @@ services:
     ports:
       - "8081:8081"
     environment:
-#      - ME_CONFIG_MONGODB_SERVER=mongo
-#      - ME_CONFIG_BASICAUTH_USERNAME=admin
-#      - ME_CONFIG_BASICAUTH_PASSWORD=admin
       - ME_CONFIG_MONGODB_SERVER=${ME_CONFIG_MONGODB_SERVER}
       - ME_CONFIG_BASICAUTH_USERNAME=${ME_CONFIG_BASICAUTH_USERNAME}
       - ME_CONFIG_BASICAUTH_PASSWORD=${ME_CONFIG_BASICAUTH_PASSWORD}
@@ -156,8 +153,6 @@ services:
     container_name: mysql
     restart: always
     environment:
-#      MYSQL_ROOT_PASSWORD: root
-#      MYSQL_DATABASE: air_quality_events
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
     ports:
